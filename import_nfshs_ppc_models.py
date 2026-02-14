@@ -89,11 +89,11 @@ def import_nfshs_ppc_models(context, file_path, resource_version, clear_scene, m
 			obj.matrix_world = m
 	elif resource_version == 'TRK':
 		for i in range(0, len(trk[0])):
-			vertices, uvs, polygons, texture_name = trk[0][i]
-			if len(vertices) > 0:
-				obj = create_object("Object", vertices, uvs, polygons, texture_name)
-				main_collection.objects.link(obj)
-				obj.matrix_world = m
+			unk_coord, coord = trk[0][i]
+			empty = bpy.data.objects.new("Empty", None)
+			main_collection.objects.link(empty)
+			empty.matrix_world = m @ Matrix.Translation(coord)
+			empty["unk_coord"] = unk_coord
 		for i in range(0, len(trk[1])):
 			vertices, uvs, polygons, texture_name = trk[1][i]
 			if len(vertices) > 0:
@@ -102,6 +102,12 @@ def import_nfshs_ppc_models(context, file_path, resource_version, clear_scene, m
 				obj.matrix_world = m
 		for i in range(0, len(trk[2])):
 			vertices, uvs, polygons, texture_name = trk[2][i]
+			if len(vertices) > 0:
+				obj = create_object("Object", vertices, uvs, polygons, texture_name)
+				main_collection.objects.link(obj)
+				obj.matrix_world = m
+		for i in range(0, len(trk[3])):
+			vertices, uvs, polygons, texture_name = trk[3][i]
 			if len(vertices) > 0:
 				obj = create_object("Object", vertices, uvs, polygons, texture_name)
 				main_collection.objects.link(obj)
@@ -272,6 +278,8 @@ def read_trk(file_path):
 				uv = struct.unpack('<2f', f.read(0x8))
 				uvs.append(uv)
 			
+			num_plgn = struct.unpack('<I', f.read(0x4))[0]
+			
 			for j in range(0, num_vrtx):
 				polygon = vrt_list[j:j + 4]
 				polygons.append(polygon)
@@ -281,7 +289,7 @@ def read_trk(file_path):
 			
 			roads[i] = [vertices, uvs, [], texture_name]
 	
-	trk = [objects, walls, roads]
+	trk = [coords, objects, walls, roads]
 	
 	return trk
 
