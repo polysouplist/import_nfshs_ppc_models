@@ -5,12 +5,12 @@
 
 
 bl_info = {
-	"name": "Import Need for Speed High Stakes Pocket PC models format",
+	"name": "Import Need for Speed High Stakes Pocket PC models format (.z3d, .trk)",
 	"description": "Import meshes files from Need for Speed High Stakes Pocket PC",
 	"author": "PolySoupList",
 	"version": (1, 0, 0),
 	"blender": (3, 6, 23),
-	"location": "File > Import > Need for Speed High Stakes Pocket PC",
+	"location": "File > Import > Need for Speed High Stakes Pocket PC (.z3d, .trk)",
 	"warning": "",
 	"wiki_url": "",
 	"tracker_url": "",
@@ -88,29 +88,37 @@ def import_nfshs_ppc_models(context, file_path, resource_version, clear_scene, m
 			main_collection.objects.link(obj)
 			obj.matrix_world = m
 	elif resource_version == 'TRK':
+		positions_collection = bpy.data.collections.new("Positions")
+		main_collection.children.link(positions_collection)
+		objects_collection = bpy.data.collections.new("Objects")
+		main_collection.children.link(objects_collection)
+		walls_collection = bpy.data.collections.new("Walls")
+		main_collection.children.link(walls_collection)
+		road_collection = bpy.data.collections.new("Road")
+		main_collection.children.link(road_collection)
 		for i in range(0, len(trk[0])):
 			unk_coord, coord = trk[0][i]
-			empty = bpy.data.objects.new("Empty", None)
-			main_collection.objects.link(empty)
-			empty.matrix_world = m @ Matrix.Translation(coord)
-			empty["unk_coord"] = unk_coord
+			position = bpy.data.objects.new("Position", None)
+			positions_collection.objects.link(position)
+			position.matrix_world = m @ Matrix.Translation(coord)
+			position["unknown"] = unk_coord
 		for i in range(0, len(trk[1])):
 			vertices, uvs, polygons, texture_name = trk[1][i]
 			if len(vertices) > 0:
 				obj = create_object("Object", vertices, uvs, polygons, texture_name)
-				main_collection.objects.link(obj)
+				objects_collection.objects.link(obj)
 				obj.matrix_world = m
 		for i in range(0, len(trk[2])):
 			vertices, uvs, polygons, texture_name = trk[2][i]
 			if len(vertices) > 0:
-				obj = create_object("Object", vertices, uvs, polygons, texture_name)
-				main_collection.objects.link(obj)
+				obj = create_object("Wall", vertices, uvs, polygons, texture_name)
+				walls_collection.objects.link(obj)
 				obj.matrix_world = m
 		for i in range(0, len(trk[3])):
 			vertices, uvs, polygons, texture_name = trk[3][i]
 			if len(vertices) > 0:
-				obj = create_object("Object", vertices, uvs, polygons, texture_name)
-				main_collection.objects.link(obj)
+				obj = create_object("Road", vertices, uvs, polygons, texture_name)
+				road_collection.objects.link(obj)
 				obj.matrix_world = m
 	
 	elapsed_time = time.time() - importing_time
@@ -408,13 +416,13 @@ class ImportNFSHSPPC(Operator, ImportHelper):
 	bl_options = {'PRESET'}
 	
 	# ImportHelper mixin class uses this
-	#filename_ext = ".geo"
+	filename_ext = "*.z3d;*.trk",
 	
-	#filter_glob: StringProperty(
-	#		options={'HIDDEN'},
-	#		default="*.geo",
-	#		maxlen=255,	 # Max internal buffer length, longer would be clamped.
-	#		)
+	filter_glob: StringProperty(
+			options={'HIDDEN'},
+			default="*.z3d;*.trk",
+			maxlen=255,	 # Max internal buffer length, longer would be clamped.
+			)
 	
 	files: CollectionProperty(
 			type=OperatorFileListElement,
@@ -556,7 +564,7 @@ class ImportNFSHSPPC(Operator, ImportHelper):
 def menu_func_import(self, context): # OK
 	pcoll = preview_collections["main"]
 	my_icon = pcoll["my_icon"]
-	self.layout.operator(ImportNFSHSPPC.bl_idname, text="Need for Speed High Stakes Pocket PC", icon_value=my_icon.icon_id)
+	self.layout.operator(ImportNFSHSPPC.bl_idname, text="Need for Speed High Stakes Pocket PC (.z3d, .trk)", icon_value=my_icon.icon_id)
 
 
 classes = (
@@ -571,7 +579,7 @@ def register(): # OK
 	pcoll = bpy.utils.previews.new()
 	
 	my_icons_dir = os.path.join(os.path.dirname(__file__), "polly_icons")
-	pcoll.load("my_icon", os.path.join(my_icons_dir, "nfshs_icon.png"), 'IMAGE')
+	pcoll.load("my_icon", os.path.join(my_icons_dir, "nfshs_ppc_icon.png"), 'IMAGE')
 
 	preview_collections["main"] = pcoll
 	
