@@ -100,6 +100,8 @@ def import_nfshs_ppc_models(context, file_path, resource_version, clear_scene, m
 		road_collection.children.link(node_collection)
 		sprite_collection = bpy.data.collections.new("Sprites")
 		road_collection.children.link(sprite_collection)
+		minimap_collection = bpy.data.collections.new("Minimap")
+		main_collection.children.link(minimap_collection)
 		for i in range(0, len(trk[0])):
 			unk_coord, coord = trk[0][i]
 			position = bpy.data.objects.new("Position", None)
@@ -146,6 +148,14 @@ def import_nfshs_ppc_models(context, file_path, resource_version, clear_scene, m
 		if len(vertices) > 0:
 			obj = create_object("Road", vertices, uvs, unpacked_polygons, texture_name)
 			road_collection.objects.link(obj)
+			obj.matrix_world = m
+		
+		minimap_vertices = trk[5]
+		if len(minimap_vertices) > 0:
+			mesh = bpy.data.meshes.new("Minimap")
+			obj = bpy.data.objects.new("Minimap", mesh)
+			mesh.from_pydata(minimap_vertices, [], [])
+			minimap_collection.objects.link(obj)
 			obj.matrix_world = m
 	
 	elapsed_time = time.time() - importing_time
@@ -268,39 +278,26 @@ def read_trk(file_path):
 		for i in range (0, num_walls):
 			vertices = []
 			uvs = []
-			polygons = []
-			vrt_list = []
-			vrt_ind = 0
 			
 			num_vrtx = struct.unpack('<I', f.read(0x4))[0]
 			
 			for j in range(0, num_vrtx):
 				vertex = struct.unpack('<3f', f.read(0xC))
 				vertices.append(vertex)
-				vrt_list.append(vrt_ind)
-				vrt_ind += 1
 			
 			for j in range(0, num_vrtx):
 				uv = struct.unpack('<2f', f.read(0x8))
 				uv = [uv[0], -uv[1] + 1.0]
 				uvs.append(uv)
 			
-			for j in range(0, num_vrtx, 2):
-				polygon = vrt_list[j:j + 3]
-				polygons.append(polygon)
-			
 			texture_length = struct.unpack('<I', f.read(0x4))[0]
 			texture_name = f.read(texture_length)
-			
-			#print(polygons)
 			
 			walls[i] = [vertices, uvs, [], texture_name]
 		
 		vertices = []
 		uvs = []
 		quads = {}
-		vrt_list = []
-		vrt_ind = 0
 		sprite = []
 		
 		polygon_indices = {}
@@ -310,8 +307,6 @@ def read_trk(file_path):
 		for j in range(0, num_vrtx):
 			vertex = struct.unpack('<3f', f.read(0xC))
 			vertices.append(vertex)
-			vrt_list.append(vrt_ind)
-			vrt_ind += 1
 		
 		for j in range(0, num_vrtx):
 			uv = struct.unpack('<2f', f.read(0x8))
@@ -331,15 +326,14 @@ def read_trk(file_path):
 				if wall_index not in polygon_indices:
 					polygon_indices[wall_index] = []
 				polygon_indices[wall_index].append(polygon)
-				
-				#print('Triangle Indices:', polygon)
+			
 			flat_images = struct.unpack('<I', f.read(0x4))[0]
-			#print('Sprites:', flat_images)
+			
 			for k in range (0, flat_images):
 				flat_image = struct.unpack('<I', f.read(0x4))[0]
-				#print('Flat_image:', flat_image)
+			
 			some_count = struct.unpack('<I', f.read(0x4))[0]
-			#print('Coordinates count:', some_count)
+			
 			for k in range(0, some_count):
 				some_xyz = struct.unpack('<3f', f.read(0xC))
 				some_index = struct.unpack('<I', f.read(0x4))[0]
@@ -353,13 +347,16 @@ def read_trk(file_path):
 		texture_length = struct.unpack('<I', f.read(0x4))[0]
 		texture_name = f.read(texture_length)
 		
+		walls_indices = polygon_indices
+		
 		road = [vertices, uvs, quads, texture_name]
+		
+		minimap_vertices = []
+		for i in range(0, int(num_vrtx/2)):
+			minimap_vertex = struct.unpack('<3f', f.read(0xC))
+			minimap_vertices.append(minimap_vertex)
 	
-	#print(polygon_indices)
-	
-	walls_indices = polygon_indices
-	
-	trk = [coords, objects, walls, walls_indices, road]
+	trk = [coords, objects, walls, walls_indices, road, minimap_vertices]
 	
 	return trk
 
